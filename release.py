@@ -22,6 +22,7 @@ envs = [
     [['GOOS', 'darwin'], ['GOARCH', 'arm64']],
     # [['GOOS', 'linux'], ['GOARCH', '386']],
     [['GOOS', 'linux'], ['GOARCH', 'amd64']],
+    [['GOOS', 'linux'], ['GOARCH', 'amd64'], ['GOAMD64', 'v3']],
 
     [['GOOS', 'linux'], ['GOARCH', 'arm'], ['GOARM', '5']],
     [['GOOS', 'linux'], ['GOARCH', 'arm'], ['GOARM', '6']],
@@ -55,12 +56,6 @@ def go_build():
     if args.i:
         envs = [envs[args.i]]
 
-    VERSION = 'dev/unknown'
-    try:
-        VERSION = subprocess.check_output('git describe --tags --long --always', shell=True).decode().rstrip()
-    except subprocess.CalledProcessError as e:
-        logger.error(f'get git tag failed: {e.args}')
-
     try:
         subprocess.check_call('go run ../ config gen config.yaml', shell=True, env=os.environ)
     except Exception:
@@ -82,7 +77,7 @@ def go_build():
         logger.info(f'building {zip_filename}')
         try:
             subprocess.check_call(
-                f'go build -ldflags "-s -w -X main.version={VERSION}" -trimpath -o {bin_filename} ../', shell=True,
+                f'go build -ldflags "-s -w" -trimpath -o {bin_filename} ../', shell=True,
                 env=os_env)
 
             if args.upx:
