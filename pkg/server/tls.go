@@ -102,9 +102,10 @@ func (s *Server) createTLSListner(l net.Listener, nextProtos []string) (net.List
 		return nil, err
 	}
 	return eTLS.NewListener(l, &eTLS.Config{
-		KernelTX:   true,
-		KernelRX:   false,
-		NextProtos: nextProtos,
+		KernelTX:       true,
+		KernelRX:       false,
+		AllowEarlyData: true,
+		NextProtos:     nextProtos,
 		GetCertificate: func(chi *eTLS.ClientHelloInfo) (*eTLS.Certificate, error) {
 			return cert, nil
 		},
