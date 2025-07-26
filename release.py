@@ -57,7 +57,7 @@ def go_build():
     if args.i:
         envs = [envs[args.i]]
 
-    VERSION = f'v{datetime.datetime.now().strftime("%y.%m.%d")}'
+    VERSION = f'Mosdns-x v{datetime.datetime.now().strftime("%y.%m.%d")}'
     print(f"Using version: {VERSION}")
 
     try:
