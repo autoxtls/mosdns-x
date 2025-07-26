@@ -23,15 +23,17 @@ jobs:
           python-version: '3.8'
 
       - name: Build
-        run: python ./release.py
+        run: |
+          echo "TAG_NAME=v$(date +'%y.%m.%d')" >> "$GITHUB_ENV"
+          python ./release.py
         env:
           CGO_ENABLED: '0'
-          VERSION: 'v1.2.3'
 
       - name: Publish
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.2.3
+          name: Mosdns-x ${{ env.TAG_NAME }}
+          tag_name: ${{ env.TAG_NAME }}
           files: './release/mosdns*.zip'
           prerelease: true
         env:
