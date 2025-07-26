@@ -43,19 +43,8 @@ func (c *quicCloser) Close() error {
 	return c.conn.CloseWithError(c.code, c.desc)
 }
 
-func (s *Server) ServeQUIC(c net.PacketConn) error {
-	tlsConf, err := s.createTLSConfig([]string{"doq"})
-	if err != nil {
-		return nil
-	}
-
-	l, err := quic.ListenEarly(c, tlsConf, &quic.Config{
-		Allow0RTT:                      true,
-		InitialStreamReceiveWindow:     4 * 1024,
-		MaxStreamReceiveWindow:         4 * 1024,
-		InitialConnectionReceiveWindow: 8 * 1024,
-		MaxConnectionReceiveWindow:     64 * 1024,
-	})
+func (s *Server) ServeQUIC(conn net.PacketConn) error {
+	l, err := s.createQUICListner(conn, []string{"doq"})
 	if err != nil {
 		return err
 	}
