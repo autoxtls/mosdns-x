@@ -24,7 +24,7 @@ jobs:
 
       - name: Build
         run: |
-          echo "TAG_NAME=v$(date +'%y.%m.%d')" >> "$GITHUB_ENV"
+          echo "TAG_NAME=v$(TZ=Asia/Hong_Kong date +'%y.%m.%d')" >> "$GITHUB_ENV"
           python ./release.py
         env:
           CGO_ENABLED: '0'
