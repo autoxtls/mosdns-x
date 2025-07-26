@@ -26,6 +26,7 @@ jobs:
         run: python ./release.py
         env:
           CGO_ENABLED: '0'
+          VERSION: '1.2.3'
 
       - name: Publish
         uses: softprops/action-gh-release@v1
