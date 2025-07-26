@@ -146,7 +146,7 @@ func (m *Mosdns) startServerListener(cfg *ServerListenerConfig, dnsHandler dns_h
 		case "", "udp":
 			run = func() error { return s.ServeUDP(conn) }
 		case "quic", "doq":
-			l, err := s.CreateQUICListner(conn, []string{"doq", "quic"})
+			l, err := s.CreateQUICListner(conn, []string{"doq", "quic", "doq-i00", "doq-i02", "doq-i03", "doq-i11"})
 			if err != nil {
 				return err
 			}
