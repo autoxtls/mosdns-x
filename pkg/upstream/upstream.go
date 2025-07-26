@@ -40,6 +40,7 @@ import (
 	"github.com/pmkol/mosdns-x/pkg/upstream/bootstrap"
 	"github.com/pmkol/mosdns-x/pkg/upstream/doh"
 	"github.com/pmkol/mosdns-x/pkg/upstream/h3roundtripper"
+	mQUIC "github.com/pmkol/mosdns-x/pkg/upstream/quic"
 	"github.com/pmkol/mosdns-x/pkg/upstream/transport"
 )
 
@@ -84,6 +85,9 @@ type Opt struct {
 
 	// EnableHTTP3 enables HTTP/3 protocol for DoH upstream.
 	EnableHTTP3 bool
+
+	// ZeroRTTHandshake use 0-RTT for DoQ upstream.
+	ZeroRTTHandshake bool
 
 	// MaxConns limits the total number of connections, including connections
 	// in the dialing states.
@@ -213,6 +217,27 @@ func NewUpstream(addr string, opt *Opt) (Upstream, error) {
 			MaxConns:       opt.MaxConns,
 		}
 		return transport.NewTransport(to)
+	case "doq", "quic":
+		var tlsConfig *tls.Config
+		if opt.TLSConfig != nil {
+			tlsConfig = opt.TLSConfig.Clone()
+		} else {
+			tlsConfig = new(tls.Config)
+		}
+		if len(tlsConfig.ServerName) == 0 {
+			tlsConfig.ServerName = tryRemovePort(addrURL.Host)
+		}
+
+		tlsConfig.NextProtos = []string{"quic", "doq"}
+
+		dialAddr := getDialAddrWithPort(addrURL.Host, opt.DialAddr, 853)
+		return mQUIC.NewQUICUpstream(dialAddr, opt.ZeroRTTHandshake, tlsConfig, &quic.Config{
+			TokenStore:                     quic.NewLRUTokenStore(4, 8),
+			InitialStreamReceiveWindow:     4 * 1024,
+			MaxStreamReceiveWindow:         4 * 1024,
+			InitialConnectionReceiveWindow: 8 * 1024,
+			MaxConnectionReceiveWindow:     64 * 1024,
+		}), nil
 	case "https":
 		idleConnTimeout := time.Second * 30
 		if opt.IdleTimeout > 0 {
