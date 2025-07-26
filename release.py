@@ -57,9 +57,10 @@ def go_build():
     if args.i:
         envs = [envs[args.i]]
 
-    VERSION = 'dev/unknown'
+    VERSION = f'v{datetime.now().strftime("%y.%m.%d")}'
+    print(f"Using version: {VERSION}")
+
     try:
-        VERSION = f'v{datetime.now().strftime("%y.%m.%d")}'
         subprocess.check_call('go run ../ config gen config.yaml', shell=True, env=os.environ)
     except Exception:
         logger.exception('failed to generate config template')
