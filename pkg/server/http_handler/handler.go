@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 	"net/netip"
+	"reflect"
 	"strings"
 
 	"github.com/miekg/dns"
@@ -48,7 +49,7 @@ type HandlerOpts struct {
 	Path string
 
 	// SrcIPHeader specifies the header that contain client source address.
-	// e.g. "X-Forwarded-For".
+	// "True-Client-IP" "X-Real-IP" "X-Forwarded-For" will parse automatically.
 	SrcIPHeader string
 
 	// Logger specifies the logger which Handler writes its log to.
@@ -82,27 +83,11 @@ func (h *Handler) warnErr(req *http.Request, msg string, err error) {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	addrPort, err := netip.ParseAddrPort(req.RemoteAddr)
-	if err != nil {
-		w.Write([]byte(fmt.Errorf("failed to parse request remote addr: %s", err).Error()))
-		w.WriteHeader(http.StatusInternalServerError)
-		h.opts.Logger.Error("failed to parse request remote addr", zap.String("addr", req.RemoteAddr), zap.Error(err))
-		return
-	}
-	clientAddr := addrPort.Addr()
-
-	// read remote addr from header
-	if header := h.opts.SrcIPHeader; len(header) != 0 {
-		if xff := req.Header.Get(header); len(xff) != 0 {
-			addr, err := readClientAddrFromXFF(xff)
-			if err != nil {
-				w.Write([]byte("invalid client address"))
-				w.WriteHeader(http.StatusBadRequest)
-				h.warnErr(req, "failed to get client ip from header", err)
-				return
-			}
-			clientAddr = addr
-		}
+	// get remote addr from header and request
+	var meta query_context.RequestMeta
+	if addr, err := getRemoteAddr(req, h.opts.SrcIPHeader); err == nil {
+		meta.ClientAddr = addr
+		req.RemoteAddr = addr.String()
 	}
 
 	// check url path
@@ -122,6 +107,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var b []byte
+	var err error
 
 	switch req.Method {
 	case http.MethodGet:
@@ -171,7 +157,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	r, err := h.opts.DNSHandler.ServeDNS(req.Context(), m, &query_context.RequestMeta{ClientAddr: clientAddr})
+	r, err := h.opts.DNSHandler.ServeDNS(req.Context(), m, &meta)
 	if err != nil {
 		w.Write([]byte("unpack response failed"))
 		w.WriteHeader(http.StatusInternalServerError)
@@ -196,9 +182,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func readClientAddrFromXFF(s string) (netip.Addr, error) {
-	if i := strings.IndexRune(s, ','); i > 0 {
-		return netip.ParseAddr(s[:i])
+func getRemoteAddr(req *http.Request, customHeader string) (netip.Addr, error) {
+	if tcip := req.Header.Get("True-Client-IP"); tcip != "" {
+		if addr, err := netip.ParseAddr(tcip); err == nil {
+			return addr, nil
+		}
 	}
-	return netip.ParseAddr(s)
+	if xrip := req.Header.Get("X-Real-IP"); xrip != "" {
+		if addr, err := netip.ParseAddr(xrip); err == nil {
+			return addr, nil
+		}
+	}
+	if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
+		ip, _, _ := strings.Cut(xff, ",")
+		if addr, err := netip.ParseAddr(ip); err == nil {
+			return addr, nil
+		}
+	}
+	if customHeader != "" && !contain([]string{"True-Client-IP", "X-Real-IP", "X-Forwarded-For"}, customHeader) {
+		if ip := req.Header.Get(customHeader); ip != "" {
+			if addr, err := netip.ParseAddr(ip); err == nil {
+				return addr, nil
+			}
+		}
+	}
+	return netip.ParseAddr(req.RemoteAddr)
+}
+
+func contain[T any](arr []T, it T) bool {
+	for _, item := range arr {
+		if reflect.DeepEqual(it, item) {
+			return true
+		}
+	}
+	return false
 }
