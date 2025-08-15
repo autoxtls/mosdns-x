@@ -34,7 +34,8 @@ jobs:
           python ./release.py -upx
         env:
           CGO_ENABLED: '0'
-          TZ: Asia/Hong_Kong
+          GOEXPERIMENT: 'greenteagc'
+          TZ: 'Asia/Hong_Kong'
 
       - name: Publish
         uses: softprops/action-gh-release@v1
