@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-go@v5.5.0
         with:
           go-version: ${{steps.go.outputs.version}}
+          cache: false
 
       - uses: actions/checkout@v4.2.2
         with:
@@ -30,7 +31,7 @@ jobs:
       - name: Build
         run: |
           echo "TAG_NAME=v$(date +'%y.%m.%d')" >> "$GITHUB_ENV"
-          python ./release.py
+          python ./release.py -upx
         env:
           CGO_ENABLED: '0'
           TZ: Asia/Hong_Kong
