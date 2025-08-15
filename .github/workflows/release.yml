@@ -8,6 +8,9 @@ jobs:
   build-release:
     runs-on: ubuntu-24.04
     steps:
+      - name: Install UPX
+        run: apt-get install upx-ucl
+    
       - name: get latest go version
         id: go
         run: |
