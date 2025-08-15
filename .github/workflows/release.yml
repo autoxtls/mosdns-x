@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Install UPX
-        run: apt-get install upx-ucl
+        run: sudo apt-get install upx-ucl
     
       - name: get latest go version
         id: go
